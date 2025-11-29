@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  web:
+    build: ./web  
+    ports:
+      - "8080:5000"
+    environment:
+      DATABASE_HOST: db
+      DATABASE_NAME: log
+      DATABASE_USER: admin
+      DATABASE_PASS: admin123
+    networks:  
+      - mi_red_log
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  db:
+    image: mariadb:10.7 
+    volumes:
+      - ./db/initdb.d/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - mariadb_data:/var/lib/mysql 
+    networks:    
+      - mi_red_log
+    environment:
+      MYSQL_DATABASE: log
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: admin123
+      MYSQL_ROOT_PASSWORD: mysecretrootpassword
+    healthcheck:
+      test: "mysqladmin ping -h localhost -u $$MYSQL_USER -p$$MYSQL_PASSWORD"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  mi_red_log:
+    driver: bridge
+
+volumes:
+  mariadb_data:
